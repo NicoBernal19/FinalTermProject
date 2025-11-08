@@ -42,11 +42,21 @@ class ModelosGrupoA:
     # 2. Entrenar modelos
     # ===========================
     def entrenar_modelos(self):
-        # Decision Tree
-        self.models["Decision Tree"] = DecisionTreeClassifier(max_depth=4, random_state=42)
-        # Random Forest
-        self.models["Random Forest"] = RandomForestClassifier(n_estimators=200, max_depth=6, random_state=42)
-        # XGBoost
+        # Calcular proporción de clases
+        pos_weight = (self.y_train.value_counts()[0] / self.y_train.value_counts()[1])
+        print(f"\n⚖️ Balance de clases - scale_pos_weight (XGBoost): {pos_weight:.2f}")
+
+        # Decision Tree balanceado
+        self.models["Decision Tree"] = DecisionTreeClassifier(
+            max_depth=4, random_state=42, class_weight='balanced'
+        )
+
+        # Random Forest balanceado
+        self.models["Random Forest"] = RandomForestClassifier(
+            n_estimators=200, max_depth=6, random_state=42, class_weight='balanced'
+        )
+
+        # XGBoost con peso ajustado
         self.models["XGBoost"] = XGBClassifier(
             random_state=42,
             n_estimators=250,
@@ -54,7 +64,8 @@ class ModelosGrupoA:
             max_depth=5,
             subsample=0.8,
             colsample_bytree=0.8,
-            eval_metric='logloss'
+            eval_metric='logloss',
+            scale_pos_weight=pos_weight
         )
 
         # Entrenamiento
