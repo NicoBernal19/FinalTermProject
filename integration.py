@@ -10,7 +10,7 @@ from modelos_grupoA import ModelosGrupoA
 
 
 class IntegracionSintesisPDF:
-    def __init__(self, reglas_path="apriori_rules_GroupA.csv", data_path="data/speed_dating_cleaned.csv", output_path="Informe_Integracion_Sintesis.pdf"):
+    def __init__(self, reglas_path="apriori_rules_GroupA.csv", data_path="data/speed_dating_cleaned.csv", output_path="data/Informe_Integracion_Sintesis.pdf"):
         self.reglas_path = reglas_path
         self.data_path = data_path
         self.output_path = output_path
@@ -67,7 +67,7 @@ class IntegracionSintesisPDF:
         sns.barplot(data=importancia_df, x='Importancia', y='Variable', palette='viridis')
         plt.title("Importancia de Variables (Decision Tree)")
         plt.tight_layout()
-        grafico_path = "importancia_variables.png"
+        grafico_path = "data/importancia_variables.png"
         plt.savefig(grafico_path)
         plt.close()
 
