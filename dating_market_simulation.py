@@ -1,5 +1,5 @@
 # =========================================================
-# Dating Market Simulation v4.1 - Group C (Optimized Visual Demo)
+# Dating Market Simulation v4.2 - Black Edition + Match Effect
 # =========================================================
 
 import pygame
@@ -7,6 +7,34 @@ import random
 import math
 import pandas as pd
 from modelos_grupoA import ModelosGrupoA
+
+# ------------------------------
+# Clase Particle (efecto visual del match)
+# ------------------------------
+class HeartParticle:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.vx = random.uniform(-2, 2)
+        self.vy = random.uniform(-3, -0.5)
+        self.life = 60  # frames (~2 segundos)
+        self.color = random.choice([(255, 80, 120), (255, 150, 200), (255, 0, 100)])
+
+    def update(self):
+        self.x += self.vx
+        self.y += self.vy
+        self.vy += 0.1  # gravedad leve
+        self.life -= 1
+        return self.life > 0
+
+    def draw(self, screen):
+        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), 4)
+        pygame.draw.circle(screen, self.color, (int(self.x + 5), int(self.y)), 4)
+        pygame.draw.polygon(screen, self.color, [
+            (self.x - 3, self.y),
+            (self.x + 8, self.y),
+            (self.x + 2, self.y + 6)
+        ])
 
 # ------------------------------
 # Clase Agent
@@ -33,22 +61,20 @@ class Agent:
         if self.y <= 10 or self.y >= height - 10: self.vy *= -1
 
     def draw(self, screen):
-        # halo
-        pygame.draw.circle(screen, (255,255,255,40), (int(self.x), int(self.y)), self.radius+3)
+        pygame.draw.circle(screen, (255,255,255), (int(self.x), int(self.y)), self.radius+2, 1)
         pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
-
 
 # ------------------------------
 # Clase principal
 # ------------------------------
-class DatingMarketSimulationV41:
+class DatingMarketSimulationV42:
     def __init__(self, n_agents=50, width=1280, height=720, rules_path="apriori_rules_GroupA.csv"):
         pygame.init()
         self.width, self.height = width, height
         self.margin_right = 380
         self.world_width = width - self.margin_right
         self.screen = pygame.display.set_mode((width, height))
-        pygame.display.set_caption("💘 Dating Market Simulation v4.1 - Enhanced Edition")
+        pygame.display.set_caption("💘 Dating Market Simulation v4.2 - Black Edition")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("arial", 22)
 
@@ -71,9 +97,9 @@ class DatingMarketSimulationV41:
         self.total_interactions = 0
         self.contact_memory = set()
         self.matches_log = []
+        self.particles = []  # lista para efectos visuales
         self.create_agents()
 
-    # Crear agentes
     def create_agents(self):
         self.agents.clear()
         for i in range(self.n_agents):
@@ -88,25 +114,17 @@ class DatingMarketSimulationV41:
         self.total_interactions = 0
         self.contact_memory.clear()
         self.matches_log.clear()
+        self.particles.clear()
 
-    # Fondo degradado
-    def draw_background(self):
-        c1, c2 = (30, 10, 40), (90, 0, 80)
-        for y in range(self.height):
-            r = y / self.height
-            color = [int(c1[i] * (1 - r) + c2[i] * r) for i in range(3)]
-            pygame.draw.line(self.screen, color, (0, y), (self.world_width, y))
-
-    # Panel lateral
     def draw_panel(self):
         x = self.world_width
         s = pygame.Surface((self.margin_right, self.height))
         s.set_alpha(230)
-        s.fill((40, 30, 60))
+        s.fill((25, 25, 25))
         self.screen.blit(s, (x, 0))
 
         lines = [
-            "Dating Market Simulation v4.1 💞",
+            "Dating Market Simulation v4.2 💞",
             f"Agents: {self.n_agents}",
             f"Diversity: ±{self.diversity}",
             f"Interactions: {self.total_interactions}",
@@ -120,7 +138,7 @@ class DatingMarketSimulationV41:
             t = self.font.render(line, True, (255,255,255))
             self.screen.blit(t, (x + 15, y)); y += 26
         for rule in self.rules:
-            t = self.font.render(f"- {rule['text']}", True, (250,200,100))
+            t = self.font.render(f"- {rule['text']}", True, (255,180,120))
             self.screen.blit(t, (x + 25, y)); y += 22
 
         # Botón de reinicio
@@ -130,7 +148,6 @@ class DatingMarketSimulationV41:
         self.screen.blit(txt, (x + 115, self.height - 70))
         return btn_rect
 
-    # Evaluar interacciones
     def check_interaction(self, a1, a2):
         if a1.gender == a2.gender or a1.matched or a2.matched: return
         pair = tuple(sorted((id(a1), id(a2))))
@@ -141,27 +158,36 @@ class DatingMarketSimulationV41:
                 self.total_interactions += 1
                 df = pd.DataFrame({'attr_o':[a1.attr],'fun_o':[a1.fun],'int_corr':[abs(a1.shar - a2.shar)/10]})
                 prediction = self.tree.predict(df)[0]
-                # Reglas Apriori + prob extra
+                # Reglas Apriori + boost visual
                 for rule in self.rules:
                     r = rule["text"].lower(); s = rule["strength"]
                     if "attr" in r and a1.attr>7 and a2.attr>7 and random.random()<s: prediction=1
                     if "fun" in r and a1.fun>7 and a2.fun>7 and random.random()<s: prediction=1
                     if "shar" in r and a1.shar>7 and a2.shar>7 and random.random()<s: prediction=1
-                if random.random()<0.2: prediction=1  # base boost
+                if random.random()<0.25: prediction=1  # boost de matches
                 if prediction==1:
                     a1.matched=a2.matched=True
                     self.total_matches+=1
                     self.matches_log.append((a1,a2))
+                    # efecto visual
+                    cx, cy = (a1.x + a2.x)/2, (a1.y + a2.y)/2
+                    for _ in range(12):
+                        self.particles.append(HeartParticle(cx, cy))
+
+    def draw_particles(self):
+        for p in self.particles[:]:
+            p.draw(self.screen)
+            if not p.update():
+                self.particles.remove(p)
 
     def draw_matches(self):
         for a1,a2 in self.matches_log:
             pygame.draw.line(self.screen,(50,255,100),(int(a1.x),int(a1.y)),(int(a2.x),int(a2.y)),2)
 
-    # Loop
     def run(self):
         running=True
         while running:
-            self.draw_background()
+            self.screen.fill((0,0,0))
             btn_rect=self.draw_panel()
 
             for e in pygame.event.get():
@@ -181,15 +207,19 @@ class DatingMarketSimulationV41:
             for i in range(len(self.agents)):
                 for j in range(i+1,len(self.agents)):
                     self.check_interaction(self.agents[i],self.agents[j])
+
             self.draw_matches()
+            self.draw_particles()
+
             pygame.display.flip()
             self.clock.tick(30)
         pygame.quit()
 
 
 if __name__=="__main__":
-    sim=DatingMarketSimulationV41()
+    sim=DatingMarketSimulationV42()
     sim.run()
+
 
 
 
